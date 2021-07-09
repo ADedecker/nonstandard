@@ -71,6 +71,10 @@ begin
   refl
 end
 
+lemma lift_rel_iff_lift_pred_uncurry' (r : α → β → Prop) (x : α*) (y : β*) : 
+  lift_rel r x y ↔ lift_pred (λ u : α × β, r u.1 u.2) (⋈ (x, y)) :=
+lift_rel_iff_lift_pred_uncurry l r x y
+
 lemma lift_rel_symm (r : α → β → Prop) (x : α*) (y : β*) : 
   lift_rel r x y ↔ lift_rel (λ a b, r b a) y x :=
 begin
@@ -116,22 +120,13 @@ end
 lemma lift_pred_exists_iff_exists_lift_pred [l.ne_bot] (r : α → β → Prop) (x : α*) : 
   lift_pred (λ x, ∃ (y : β), r x y) x ↔ ∃ (y : β*), lift_pred (uncurry r) (⋈ (x, y)) :=
 begin
-  refine x.induction_on (λ f, _),
-  rw lift_pred_coe,
-  split, 
-  { intro h,
-    rcases h.choice with ⟨g, hg⟩,
-    use g,
-    rw lift_rel_coe,
-    exact hg },
-  { rintro ⟨y, hy⟩,
-    revert hy,
-    refine y.induction_on (λ g, _),
-    intro hg,
-    rw lift_rel_coe at hg,
-    filter_upwards [hg],
-    exact λ i hi, ⟨g i, hi⟩ }
+  conv_rhs {congr, funext, rw ← lift_rel_iff_lift_pred_uncurry},
+  exact lift_pred_exists_iff_exists_lift_rel l r x
 end
+
+lemma lift_pred_exists_iff_exists_lift_pred' [l.ne_bot] (r : α → β → Prop) (x : α*) : 
+  lift_pred (λ x, ∃ (y : β), r x y) x ↔ ∃ (y : β*), lift_pred (λ u : α × β, r u.1 u.2) (⋈ (x, y)) :=
+lift_pred_exists_iff_exists_lift_pred l r x
 
 example : (∀ (x : ℝ), ∃ y, y ≤ x) ↔ (∀ (x : ℝ*), ∃ y, y ≤ x) :=
 begin
@@ -155,6 +150,7 @@ variables {ι α β : Type*} (l : ultrafilter ι)
 local notation `∀*` binders `, ` r:(scoped p, filter.eventually p l) := r
 local notation `α*` := (l : filter ι).germ α
 local notation `β*` := (l : filter ι).germ β
+local notation `⋈` := (prod_equiv (l : filter ι) : α* × β* → (l : filter ι).germ (α × β))
 
 lemma lift_pred_not_iff_not_lift_pred (p : α → Prop) (x : α*) : 
   lift_pred (λ x, ¬ p x) x ↔ ¬ lift_pred p x :=
@@ -179,6 +175,20 @@ begin
   exact lift_pred_exists_iff_exists_lift_rel ↑l _ x,
 end
 
+lemma lift_pred_forall_iff_forall_lift_pred (r : α → β → Prop) (x : α*) : 
+  lift_pred (λ x, ∀ (y : β), r x y) x ↔ ∀ (y : β*), lift_pred (uncurry r) (⋈ (x, y)) :=
+begin
+  convert lift_pred_forall_iff_forall_lift_rel l r x,
+  ext,
+  exact forall_congr (λ y, by rw ← lift_rel_iff_lift_pred_uncurry)
+end
+
+lemma lift_pred_forall_iff_forall_lift_pred' (r : α → β → Prop) (x : α*) : 
+  lift_pred (λ x, ∀ (y : β), r x y) x ↔ ∀ (y : β*), lift_pred (λ u : α × β, r u.1 u.2) (⋈ (x, y)) :=
+lift_pred_forall_iff_forall_lift_pred l r x
+
+end ultrafilter
+
 example : (∃ (x : ℝ), ∀ y, y ≤ x) ↔ (∃ (x : ℝ*), ∀ y, y ≤ x) :=
 begin
   rw exists_iff_exists_lift_pred (hyperfilter ℕ : filter ℕ),
@@ -189,17 +199,20 @@ begin
   refl
 end
 
-example : (∀ (x y : ℝ), ∃ z, (x ≤ z ∧ z ≤ y) ∨ (y ≤ z ∧ z ≤ x)) ↔ 
-  (∀ (x y : ℝ*), ∃ z, (x ≤ z ∧ z ≤ y) ∨ (y ≤ z ∧ z ≤ x)) :=
+example : (∀ (x y : ℝ), ∃ z, x ≤ z) ↔ 
+  (∀ (x y : ℝ*), ∃ z, x ≤ z) :=
 begin
   rw forall_iff_forall_lift_pred (hyperfilter ℕ : filter ℕ),
   refine forall_congr (λ x, _),
-  rw lift_pred_forall_iff_forall_lift_rel,
+  rw lift_pred_forall_iff_forall_lift_pred',
   refine forall_congr (λ y, _),
-  rw lift_rel_symm,
-  refl
+  rw lift_pred_exists_iff_exists_lift_pred',
+  refine exists_congr (λ z, _),
+  refine x.induction_on (λ f, _),
+  refine y.induction_on (λ g, _),
+  refine z.induction_on (λ h, _),
+  simp,
+  refl,
 end
-
-end ultrafilter
 
 end filter.germ
