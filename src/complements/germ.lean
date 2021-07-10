@@ -126,4 +126,13 @@ begin
   exact eventually_and
 end
 
+/-! ### Exists rules for Props -/
+
+lemma lift_pred_exists_prop_iff_and_lift_pred [l.ne_bot] (p q : α → Prop) (x : α*) :
+  lift_pred (λ x, ∃ (h : p x), q x) x ↔ lift_pred p x ∧ lift_pred q x :=
+begin
+  conv in (Exists _) {rw exists_prop},
+  exact lift_pred_and_iff_and_lift_pred l p q x
+end
+
 end filter.germ

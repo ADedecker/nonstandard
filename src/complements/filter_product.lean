@@ -32,6 +32,15 @@ begin
   rw [lift_rel_coe, lift_rel_coe, eventually_not]
 end
 
+/-! ### Imp rules -/
+
+lemma lift_pred_imp_iff_imp_lift_pred (p q : α → Prop) (x : α*) :
+  lift_pred (λ x, p x → q x) x ↔ (lift_pred p x → lift_pred q x) :=
+begin
+  refine x.induction_on (λ f, _),
+  exact eventually_imp
+end
+
 /-! ### Forall rules -/
 
 lemma lift_pred_forall_iff_forall_lift_rel (r : α → β → Prop) (x : α*) : 
