@@ -64,4 +64,14 @@ lemma lift_pred_forall_iff_forall_lift_pred' (r : α → β → Prop) (x : α*) 
   lift_pred (λ x, ∀ (y : β), r x y) x ↔ ∀ (y : β*), lift_pred (λ u : α × β, r u.1 u.2) (⋈ (x, y)) :=
 lift_pred_forall_iff_forall_lift_pred l r x
 
+/-! ### Lt rules -/
+
+lemma lift_pred_lt_iff_lt_map [preorder β] (f g : α → β) (x : α*) :
+  lift_pred (λ x, f x < g x) x ↔ germ.map f x < germ.map g x :=
+begin
+  refine x.induction_on (λ f, _),
+  rw lt_def,
+  refl
+end
+
 end filter.germ

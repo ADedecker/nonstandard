@@ -55,30 +55,30 @@ begin
   refine forall_congr (λ ε, _),
   rw lift_pred_imp_iff_imp_lift_pred,
   refine imp_congr _ _,
-  { refine ε.induction_on (λ f, _),
-    rw [gt_iff_lt, lt_def], -- TODO : how should this be handled ?
+  { rw lift_pred_lt_iff_lt_map,
+    refine ε.induction_on (λ f, _),
     refl },
   { rw lift_pred_exists_iff_exists_lift_pred',
     refine exists_congr (λ δ, _),
     rw [lift_pred_exists_prop_iff_and_lift_pred, exists_prop],
     refine and_congr _ _,
-    { refine ε.induction_on (λ f, _),
+    { rw lift_pred_lt_iff_lt_map,
+      refine ε.induction_on (λ f, _),
       refine δ.induction_on (λ g, _),
-      rw [gt_iff_lt, lt_def], -- TODO : how should this be handled ?
       refl },
     { rw lift_pred_forall_iff_forall_lift_pred',
       refine forall_congr (λ x, _),
       rw lift_pred_imp_iff_imp_lift_pred,
       refine imp_congr _ _,
-      { refine ε.induction_on (λ f, _),
+      { rw lift_pred_lt_iff_lt_map,
+        refine ε.induction_on (λ f, _),
         refine δ.induction_on (λ g, _),
         refine x.induction_on (λ h, _),
-        rw [lt_def], -- TODO : how should this be handled ?
         refl },
-      { refine ε.induction_on (λ f, _),
+      { rw lift_pred_lt_iff_lt_map,
+        refine ε.induction_on (λ f, _),
         refine δ.induction_on (λ g, _),
         refine x.induction_on (λ h, _),
-        rw [lt_def], -- TODO : how should this be handled ?
         refl } } }
 end
 
@@ -90,8 +90,8 @@ begin
   refine forall_congr (λ ε, _),
   rw lift_pred_imp_iff_imp_lift_pred,
   refine imp_congr _ _,
-  { refine ε.induction_on (λ f, _),
-    rw [gt_iff_lt, lt_def], -- TODO : how should this be handled ?
+  { rw lift_pred_lt_iff_lt_map,
+    refine ε.induction_on (λ f, _),
     refl },
   { rw lift_pred_exists_iff_exists_lift_pred',
     refine exists_congr (λ N, _),
