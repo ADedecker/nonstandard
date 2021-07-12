@@ -7,7 +7,7 @@ open tactic expr
 
 namespace tactic
 
-section step_one
+section lift_lhs
 
 private meta def forall_rule (l : expr) (α : expr) : tactic unit :=
 do  `(filter %%ι) ← infer_type l,
@@ -19,7 +19,7 @@ do  `(filter %%ι) ← infer_type l,
     e ← to_expr ``(filter.germ.exists_iff_exists_lift_pred %%l),
     rewrite_target e
 
-meta def transfer_step_one_aux (tgt : expr) : tactic unit :=
+meta def transfer.lift_lhs (tgt : expr) : tactic unit :=
 do  `(%%lhs ↔ %%rhs) ← (return tgt) | fail "Goal is not an equivalence (step 1)",
     match rhs with
     | `(∀ _ : (filter.germ %%l %%α), _) := forall_rule l α
@@ -29,11 +29,11 @@ do  `(%%lhs ↔ %%rhs) ← (return tgt) | fail "Goal is not an equivalence (step
     | _ := fail "No known pattern applicable (step 1)"
     end
 
-end step_one
+end lift_lhs
 
-section step_two
+section congr
 
-meta def transfer_step_two_aux (tgt : expr) : tactic unit :=
+meta def transfer.congr (tgt : expr) : tactic unit :=
 do  `(%%lhs ↔ %%rhs) ← (return tgt) | fail "Goal is not an equivalence (step 2)",
     match lhs with
     | `(∀ _ : %%t, _) := 
@@ -57,11 +57,11 @@ do  `(%%lhs ↔ %%rhs) ← (return tgt) | fail "Goal is not an equivalence (step
     | _ := fail "No known pattern applicable (step 2)"
     end
 
-end step_two
+end congr
 
-section step_three
+section push_lift
 
-meta def transfer_step_three_aux (tgt : expr) : tactic unit :=
+meta def transfer.push_lift (tgt : expr) : tactic unit :=
 do  `(filter.germ.lift_pred %%p %%x ↔ %%rhs) ← (return tgt) | fail "Goal is not an equivalence (step 3)",
     match p with
     | `(λ _, ∀ y, %%q) := 
@@ -85,55 +85,70 @@ do  `(filter.germ.lift_pred %%p %%x ↔ %%rhs) ← (return tgt) | fail "Goal is 
     | _ := fail "No known pattern applicable (step 3)"
     end
 
-end step_three
+end push_lift
 
-meta def transfer_step_four_aux (tgt : expr) : tactic unit :=
-do  hyps ← local_context,
-    hyps.mmap' (λ x, try $ 
-      do  `(filter.germ _ _) ← infer_type x,
-          refine ``((%%x).induction_on _), 
-          name ← get_unused_name, 
-          intro name ),
-    try (reflexivity)
+section induction
+
+meta def transfer.induction (tgt : expr) : tactic unit :=
+local_context >>= list.mmap' (λ x, try $ 
+  do  `(filter.germ _ _) ← infer_type x,
+      refine ``((%%x).induction_on _), 
+      name ← get_unused_name, 
+      intro name )
+
+meta def transfer.close (tgt : expr) : tactic unit :=
+transfer.induction tgt >> reflexivity
+
+meta def transfer.simp (tgt : expr) : tactic unit :=
+transfer.induction tgt >> `[simp]
+
+end induction
 
 namespace interactive
 
 setup_tactic_parser
 
-meta def transfer_step_one : tactic unit :=
-target >>= transfer_step_one_aux
+meta def transfer.lift_lhs : tactic unit :=
+target >>= tactic.transfer.lift_lhs
 
-meta def transfer_step_two : tactic unit :=
-target >>= transfer_step_two_aux
+meta def transfer.congr : tactic unit :=
+target >>= tactic.transfer.congr
 
-meta def transfer_step_three : tactic unit :=
-target >>= transfer_step_three_aux
+meta def transfer.push_lift : tactic unit :=
+target >>= tactic.transfer.push_lift
 
-meta def transfer_step_four : tactic unit :=
-target >>= transfer_step_four_aux
+meta def transfer.induction : tactic unit :=
+target >>= tactic.transfer.induction
+
+meta def transfer.simp : tactic unit :=
+target >>= tactic.transfer.simp
+
+meta def transfer.close : tactic unit :=
+target >>= tactic.transfer.close
+
+meta def transfer.step : tactic unit :=
+transfer.close <|>
+transfer.congr <|>
+(transfer.push_lift >> try transfer.congr) <|>
+(transfer.lift_lhs >> try transfer.congr) <|>
+transfer.simp -- WARNING
 
 end interactive
-
-#check `[rw filter.germ.forall_iff_forall_lift_pred]
 
 example (α ι : Type*) [preorder α] (l : ultrafilter ι) (a : α) : 
   (∀ x, a ≤ x) ↔ (∀ x : (l : filter ι).germ α, ↑a ≤ x) :=
 begin
-  transfer_step_one,
-  transfer_step_two,
-  transfer_step_four,
+  transfer.step,
+  transfer.step
 end
 
 example (α ι : Type*) [preorder α] (l : ultrafilter ι) (a : α) : 
   (∀ x y : α, x = y) ↔ (∀ x y : (l : filter ι).germ α, x = y) :=
 begin
-  transfer_step_one,
-  transfer_step_two,
-  transfer_step_three,
-  transfer_step_two,
-  transfer_step_four,
-  rw filter.germ.coe_eq,
-  refl
+  transfer.step,
+  transfer.step,
+  transfer.step,
+  transfer.step
 end
 
 open filter
@@ -142,24 +157,18 @@ example (l : ℝ) (u : ℕ → ℝ) :
   (∀ ε > 0, ∃ N ≥ (1 : ℕ), ∀ n ≥ N, abs (u n - l) < ε) ↔
   (∀ ε > 0, ∃ N ≥ (1 : (hyperfilter ℕ : filter ℕ).germ ℕ), ∀ n ≥ N, germ.map abs (germ.map u n - ↑l) < ε) :=
 begin
-  transfer_step_one,
-  transfer_step_two,
-  transfer_step_three,
-  transfer_step_two,
-  { transfer_step_three, 
-    transfer_step_four },
-  { transfer_step_three,
-    transfer_step_two,
-    transfer_step_three,
-    transfer_step_two,
-    { transfer_step_four },
-    { transfer_step_three,
-      transfer_step_two,
-      transfer_step_three,
-      transfer_step_two,
-      { transfer_step_four },
-      { transfer_step_three,
-        transfer_step_four } } }
+  transfer.step,
+  transfer.step,
+  { transfer.step, 
+    transfer.step },
+  { transfer.step, 
+    transfer.step, 
+    { transfer.step },
+    { transfer.step, 
+      transfer.step,
+      { transfer.step },
+      { transfer.step, 
+        transfer.step } } }
 end
 
 end tactic
