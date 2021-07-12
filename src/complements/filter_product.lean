@@ -32,6 +32,15 @@ begin
   rw [lift_rel_coe, lift_rel_coe, eventually_not]
 end
 
+/-! ### Ne rules -/
+
+lemma lift_pred_ne_iff_ne_map (f g : α → β) (x : α*) :
+  lift_pred (λ x, f x ≠ g x) x ↔ germ.map f x ≠ germ.map g x :=
+begin
+  refine x.induction_on (λ u, _),
+  rw [ne, eq_def, lift_pred_coe, map_coe, map_coe, lift_rel_coe, eventually_not]
+end
+
 /-! ### Imp rules -/
 
 lemma lift_pred_imp_iff_imp_lift_pred (p q : α → Prop) (x : α*) :
@@ -63,6 +72,15 @@ end
 lemma lift_pred_forall_iff_forall_lift_pred' (r : α → β → Prop) (x : α*) : 
   lift_pred (λ x, ∀ (y : β), r x y) x ↔ ∀ (y : β*), lift_pred (λ u : α × β, r u.1 u.2) (⋈ (x, y)) :=
 lift_pred_forall_iff_forall_lift_pred l r x
+
+/-! ### Or rules -/
+
+lemma lift_pred_or_iff_or_lift_pred (p q : α → Prop) (x : α*) :
+  lift_pred (λ x, p x ∨ q x) x ↔ lift_pred p x ∨ lift_pred q x :=
+begin
+  refine x.induction_on (λ f, _),
+  exact eventually_or
+end
 
 /-! ### Lt rules -/
 

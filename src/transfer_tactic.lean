@@ -54,6 +54,15 @@ do  `(%%lhs ↔ %%rhs) ← (return tgt) | fail "Goal is not an equivalence (step
     | `(_ ∧ _) := 
       do  name ← get_unused_name,
           refine ``(and_congr _ _)
+    | `(_ ∨ _) := 
+      do  name ← get_unused_name,
+          refine ``(or_congr _ _)
+    | `(¬ _) := 
+      do  name ← get_unused_name,
+          refine ``(not_congr _)
+    | `(_ = _) := 
+      do  name ← get_unused_name,
+          refine ``(iff_of_eq (_root_.congr (=) _))
     | _ := fail "No known pattern applicable (step 2)"
     end
 
@@ -69,6 +78,9 @@ do  `(filter.germ.lift_pred %%p %%x ↔ %%rhs) ← (return tgt) | fail "Goal is 
           rewrite_target e) <|>
       (do e ← to_expr ``(filter.germ.lift_pred_imp_iff_imp_lift_pred),
           rewrite_target e)
+    | `(λ _, ¬ %%q) := 
+      do  e ← to_expr ``(filter.germ.lift_pred_not_iff_not_lift_pred),
+          rewrite_target e
     | `(λ _, ∃ y, %%q) := 
       (do e ← to_expr ``(filter.germ.lift_pred_exists_iff_exists_lift_pred'),
           rewrite_target e) <|>
@@ -82,6 +94,18 @@ do  `(filter.germ.lift_pred %%p %%x ↔ %%rhs) ← (return tgt) | fail "Goal is 
     | `(λ _, _ > _) := 
       do  e ← to_expr ``(filter.germ.lift_pred_lt_iff_lt_map),
           rewrite_target e
+    | `(λ _, _ = _) :=
+      do  e ← to_expr ``(filter.germ.lift_pred_eq_iff_eq_map),
+          rewrite_target e
+    | `(λ _, _ ≠ _) :=
+      do  e ← to_expr ``(filter.germ.lift_pred_ne_iff_ne_map),
+          rewrite_target e
+    | `(λ _, _ ∧ _) :=
+      do  e ← to_expr ``(filter.germ.lift_pred_and_iff_and_lift_pred),
+          rewrite_target e
+    | `(λ _, _ ∨ _) :=
+      do  e ← to_expr ``(filter.germ.lift_pred_or_iff_or_lift_pred),
+          rewrite_target e
     | _ := fail "No known pattern applicable (step 3)"
     end
 
@@ -91,7 +115,12 @@ section induction
 
 meta def transfer_induction (tgt : expr) : tactic unit :=
 local_context >>= list.mmap' (λ x, try $ 
-  do  `(filter.germ _ _) ← infer_type x,
+  do  t ← infer_type x,
+      match t with
+      | `(filter.germ _ _) := skip
+      | `(ℝ*) := skip
+      | _ := fail ()
+      end,
       refine ``((%%x).induction_on _), 
       name ← get_unused_name, 
       intro name )
@@ -133,22 +162,14 @@ end interactive
 
 example (α ι : Type*) [preorder α] (l : ultrafilter ι) (a : α) : 
   (∀ x, a ≤ x) ↔ (∀ x : (l : filter ι).germ α, ↑a ≤ x) :=
-begin
-  transfer
-end
+by transfer
 
 example (α ι : Type*) [preorder α] (l : ultrafilter ι) (a : α) : 
   (∀ x y : α, x = y) ↔ (∀ x y : (l : filter ι).germ α, x = y) :=
-begin
-  transfer,
-  transfer_induction,
-  simp,
-  refl
-end
+by transfer
 
 open filter
 
-set_option profiler true
 example (l : ℝ) (u : ℕ → ℝ) :
   (∀ ε > 0, ∃ N ≥ (1 : ℕ), ∀ n ≥ N, abs (u n - l) < ε) ↔
   (∀ ε > 0, ∃ N ≥ (1 : (hyperfilter ℕ : filter ℕ).germ ℕ), ∀ n ≥ N, germ.map abs (germ.map u n - ↑l) < ε) :=

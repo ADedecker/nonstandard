@@ -13,6 +13,12 @@ local notation `∀*` binders `, ` r:(scoped p, filter.eventually p l) := r
 local notation `α*` := l.germ α
 local notation `β*` := l.germ β
 
+lemma eq_def : ((=) : α* → α* → Prop) = lift_rel (=) :=
+begin
+  ext ⟨f⟩ ⟨g⟩,
+  exact coe_eq
+end
+
 /-! ## Product of germs -/
 
 def prod_equiv : α* × β* ≃ l.germ (α × β) :=
@@ -116,6 +122,16 @@ end
 lemma lift_pred_exists_iff_exists_lift_pred' [l.ne_bot] (r : α → β → Prop) (x : α*) : 
   lift_pred (λ x, ∃ (y : β), r x y) x ↔ ∃ (y : β*), lift_pred (λ u : α × β, r u.1 u.2) (⋈ (x, y)) :=
 lift_pred_exists_iff_exists_lift_pred l r x
+
+/-! ### Eq rules -/
+
+lemma lift_pred_eq_iff_eq_map (f g : α → β) (x : α*) :
+  lift_pred (λ x, f x = g x) x ↔ germ.map f x = germ.map g x :=
+begin
+  refine x.induction_on (λ u, _),
+  rw eq_def,
+  refl,
+end
 
 /-! ### And rules -/
 
